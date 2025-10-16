@@ -1,5 +1,12 @@
 .icon {
-  width: 64px;
+  width: 120px;
   vertical-align: top;
-  border: 1px solid salmon;
+  border: 1px solid black;
+}
+
+#canvas {
+  border: 1.5px solid black;
+  border-radius: 10px;
+  filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.5));
+  background-color: white;
 }
