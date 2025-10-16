@@ -16,50 +16,79 @@ const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 document.body.insertBefore(title, canvas);
 const ctx = canvas.getContext("2d")!;
 
-const clearButton = document.getElementById("clearButton") as HTMLButtonElement;
-clearButton.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+type Point = { x: number; y: number };
+type Stroke = Point[];
+type Drawing = Stroke[];
+
+let drawingData: Drawing = [];
+let currentStroke: Stroke = [];
+let isDrawing = false;
+
+function dispatchDrawingChanged() {
+  const event = new CustomEvent("drawing-changed");
+  canvas.dispatchEvent(event);
+}
+
+canvas.addEventListener("drawing-changed", () => {
+  redrawCanvas();
 });
 
-let isDrawing = false;
-let x = 0;
-let y = 0;
+function redrawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawingData.forEach((stroke) => {
+    if (stroke.length < 2) return;
+
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+    ctx.moveTo(stroke[0].x, stroke[0].y);
+
+    for (let i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i].x, stroke[i].y);
+    }
+
+    ctx.stroke();
+    ctx.closePath();
+  });
+}
+
+const clearButton = document.getElementById("clearButton") as HTMLButtonElement;
+clearButton.addEventListener("click", () => {
+  drawingData = [];
+  currentStroke = [];
+  dispatchDrawingChanged();
+});
 
 canvas.addEventListener("mousedown", (e) => {
-  x = e.offsetX;
-  y = e.offsetY;
   isDrawing = true;
+  currentStroke = [{ x: e.offsetX, y: e.offsetY }];
+  dispatchDrawingChanged();
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (isDrawing) {
-    drawLine(ctx, x, y, e.offsetX, e.offsetY);
-    x = e.offsetX;
-    y = e.offsetY;
+    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+    dispatchDrawingChanged();
   }
 });
 
 canvas.addEventListener("mouseup", (e) => {
   if (isDrawing) {
-    drawLine(ctx, x, y, e.offsetX, e.offsetY);
-    x = 0;
-    y = 0;
+    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+    drawingData.push([...currentStroke]);
+    currentStroke = [];
     isDrawing = false;
+    dispatchDrawingChanged();
   }
 });
 
-function drawLine(
-  ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-) {
-  ctx.beginPath();
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 1;
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.closePath();
-}
+canvas.addEventListener("mouseleave", (e) => {
+  if (isDrawing) {
+    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+    drawingData.push([...currentStroke]);
+    currentStroke = [];
+    isDrawing = false;
+    dispatchDrawingChanged();
+  }
+});
