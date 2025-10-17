@@ -6,6 +6,8 @@ document.body.innerHTML = `
   <canvas id = "canvas" width = "256" height = "256"></canvas>
   <div>
   <button id = "clearButton" > Clear </button>
+  <button id = "redoButton" > Undo </button>
+  <button id = "undoButton" > Redo </button>
   </div>
 `;
 
@@ -21,6 +23,7 @@ type Stroke = Point[];
 type Drawing = Stroke[];
 
 let drawingData: Drawing = [];
+let undoneStrokes: Stroke[] = [];
 let currentStroke: Stroke = [];
 let isDrawing = false;
 
@@ -53,10 +56,29 @@ function redrawCanvas() {
   });
 }
 
+const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
+undoButton.addEventListener("click", () => {
+  if (undoneStrokes.length > 0) {
+    const lastUndone = undoneStrokes.pop()!;
+    drawingData.push(lastUndone);
+    dispatchDrawingChanged();
+  }
+});
+
+const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
+redoButton.addEventListener("click", () => {
+  if (drawingData.length > 0) {
+    const lastStroke = drawingData.pop()!;
+    undoneStrokes.push(lastStroke);
+    dispatchDrawingChanged();
+  }
+});
+
 const clearButton = document.getElementById("clearButton") as HTMLButtonElement;
 clearButton.addEventListener("click", () => {
   drawingData = [];
   currentStroke = [];
+  undoneStrokes = [];
   dispatchDrawingChanged();
 });
 
