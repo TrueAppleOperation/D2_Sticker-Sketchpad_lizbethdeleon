@@ -5,9 +5,14 @@ document.body.innerHTML = `
   <p><img src="${IconUrl}" class="icon" /></p>
   <canvas id = "canvas" width = "256" height = "256"></canvas>
   <div>
-  <button id = "clearButton" > Clear </button>
-  <button id = "redoButton" > Undo </button>
-  <button id = "undoButton" > Redo </button>
+      <br>
+    <button id = "clearButton" > Clear </button>
+    <button id = "redoButton" > Undo </button>
+    <button id = "undoButton" > Redo </button>
+      <br>
+      <br>
+    <button id = "thinMarkerButton" > Thin </button>
+    <button id = "thickMarkerButton" > Thick </button>
   </div>
 `;
 
@@ -24,11 +29,13 @@ interface DrawableCommand {
   display(ctx: CanvasRenderingContext2D): void;
 }
 
-class MarkerLine implements DrawableCommand { // represents a single stroke
+class MarkerLine implements DrawableCommand {
   private points: Point[] = [];
+  private thickness: number;
 
-  constructor(initialPoint: Point) {
+  constructor(initialPoint: Point, thickness: number = 1) {
     this.points.push(initialPoint);
+    this.thickness = thickness;
   }
 
   drag(x: number, y: number): void {
@@ -40,7 +47,7 @@ class MarkerLine implements DrawableCommand { // represents a single stroke
 
     ctx.beginPath();
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = this.thickness;
     ctx.moveTo(this.points[0].x, this.points[0].y);
 
     for (let i = 1; i < this.points.length; i++) {
@@ -51,7 +58,7 @@ class MarkerLine implements DrawableCommand { // represents a single stroke
     ctx.closePath();
   }
 
-  getPoints(): Point[] { // get copy of points
+  getPoints(): Point[] {
     return [...this.points];
   }
 }
@@ -60,6 +67,7 @@ let drawingData: DrawableCommand[] = [];
 let undoneStrokes: DrawableCommand[] = [];
 let currentStroke: MarkerLine | null = null;
 let isDrawing = false;
+let currentThickness: number = 1; // Default to thin marker
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
@@ -82,8 +90,37 @@ function redrawCanvas() {
   }
 }
 
-const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
-undoButton.addEventListener("click", () => {
+function setSelectedTool(selectedButton: HTMLButtonElement) {
+  const allToolButtons = document.querySelectorAll(
+    "#thinMarkerButton, #thickMarkerButton",
+  );
+  allToolButtons.forEach((button) => {
+    button.classList.remove("selectedTool");
+  });
+
+  selectedButton.classList.add("selectedTool");
+}
+
+const thinButton = document.getElementById(
+  "thinMarkerButton",
+) as HTMLButtonElement;
+thinButton.addEventListener("click", () => {
+  currentThickness = 1;
+  setSelectedTool(thinButton);
+});
+
+const thickButton = document.getElementById(
+  "thickMarkerButton",
+) as HTMLButtonElement;
+thickButton.addEventListener("click", () => {
+  currentThickness = 5;
+  setSelectedTool(thickButton);
+});
+
+setSelectedTool(thinButton);
+
+const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
+redoButton.addEventListener("click", () => {
   if (drawingData.length > 0) {
     const lastStroke = drawingData.pop()!;
     undoneStrokes.push(lastStroke);
@@ -91,8 +128,8 @@ undoButton.addEventListener("click", () => {
   }
 });
 
-const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
-redoButton.addEventListener("click", () => {
+const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
+undoButton.addEventListener("click", () => {
   if (undoneStrokes.length > 0) {
     const lastUndone = undoneStrokes.pop()!;
     drawingData.push(lastUndone);
@@ -110,7 +147,10 @@ clearButton.addEventListener("click", () => {
 
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentStroke = new MarkerLine({ x: e.offsetX, y: e.offsetY });
+  currentStroke = new MarkerLine(
+    { x: e.offsetX, y: e.offsetY },
+    currentThickness,
+  );
   dispatchDrawingChanged();
 });
 
