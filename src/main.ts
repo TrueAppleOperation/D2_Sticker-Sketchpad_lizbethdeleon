@@ -16,6 +16,11 @@ document.body.innerHTML = `
   </div>
 `;
 
+const smallCursor =
+  `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4"><circle cx="2" cy="2" r="1" fill="black" stroke="white" stroke-width="0.5"/></svg>') 2 2, auto`;
+const bigCursor =
+  `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3" fill="black" stroke="white" stroke-width="0.5"/></svg>') 6 6, auto`;
+
 const title = document.createElement("h1");
 title.textContent = "Sticker Sketchpad";
 
@@ -68,6 +73,7 @@ let undoneStrokes: DrawableCommand[] = [];
 let currentStroke: MarkerLine | null = null;
 let isDrawing = false;
 let currentThickness: number = 1; // Default to thin marker
+canvas.style.cursor = smallCursor;
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
@@ -90,6 +96,14 @@ function redrawCanvas() {
   }
 }
 
+function updateCursor() {
+  if (currentThickness === 1) {
+    canvas.style.cursor = smallCursor;
+  } else {
+    canvas.style.cursor = bigCursor;
+  }
+}
+
 function setSelectedTool(selectedButton: HTMLButtonElement) {
   const allToolButtons = document.querySelectorAll(
     "#thinMarkerButton, #thickMarkerButton",
@@ -107,6 +121,7 @@ const thinButton = document.getElementById(
 thinButton.addEventListener("click", () => {
   currentThickness = 1;
   setSelectedTool(thinButton);
+  updateCursor();
 });
 
 const thickButton = document.getElementById(
@@ -115,6 +130,7 @@ const thickButton = document.getElementById(
 thickButton.addEventListener("click", () => {
   currentThickness = 5;
   setSelectedTool(thickButton);
+  updateCursor();
 });
 
 setSelectedTool(thinButton);
