@@ -13,6 +13,11 @@ document.body.innerHTML = `
       <br>
     <button id = "thinMarkerButton" > Thin </button>
     <button id = "thickMarkerButton" > Thick </button>
+      <br>
+      <br>
+    <button id = "starStickerButton" >⭐</button>
+    <button id = "saturnStickerButton" >🪐</button>
+    <button id = "cometStickerButton" >☄️</button>
   </div>
 `;
 
@@ -68,15 +73,83 @@ class MarkerLine implements DrawableCommand {
   }
 }
 
+class Sticker implements DrawableCommand {
+  private position: Point;
+  private emoji: string;
+  private size: number = 20;
+
+  constructor(position: Point, emoji: string) {
+    this.position = position;
+    this.emoji = emoji;
+  }
+
+  drag(x: number, y: number): void {
+    this.position = { x, y };
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.fillText(this.emoji, this.position.x, this.position.y);
+  }
+
+  getPosition(): Point {
+    return { ...this.position };
+  }
+
+  containsPoint(point: Point): boolean {
+    const halfSize = this.size / 2;
+    return (
+      point.x >= this.position.x - halfSize &&
+      point.x <= this.position.x + halfSize &&
+      point.y >= this.position.y - halfSize &&
+      point.y <= this.position.y + halfSize
+    );
+  }
+}
+
+class StickerPreview implements DrawableCommand {
+  private position: Point;
+  private emoji: string;
+  private stickerSize: number = 20;
+
+  constructor(position: Point, emoji: string) {
+    this.position = position;
+    this.emoji = emoji;
+  }
+
+  drag(x: number, y: number): void {
+    this.position = { x, y };
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.font = `${this.stickerSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.globalAlpha = 0.4;
+    ctx.fillText(this.emoji, this.position.x, this.position.y);
+    ctx.globalAlpha = 1.0;
+  }
+}
+
 let drawingData: DrawableCommand[] = [];
 let undoneStrokes: DrawableCommand[] = [];
 let currentStroke: MarkerLine | null = null;
+let currentStickerPreview: StickerPreview | null = null;
+let selectedStickerEmoji: string | null = null;
 let isDrawing = false;
-let currentThickness: number = 1; // Default to thin marker
+let isPlacingSticker = false;
+let isDraggingSticker = false;
+let draggedSticker: Sticker | null = null;
+let currentThickness: number = 1;
+
 canvas.style.cursor = smallCursor;
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
+  canvas.dispatchEvent(event);
+}
+
+function dispatchToolMoved(toolType: string) {
+  const event = new CustomEvent("tool-moved", { detail: { tool: toolType } });
   canvas.dispatchEvent(event);
 }
 
@@ -94,10 +167,16 @@ function redrawCanvas() {
   if (currentStroke) {
     currentStroke.display(ctx);
   }
+
+  if (currentStickerPreview) {
+    currentStickerPreview.display(ctx);
+  }
 }
 
 function updateCursor() {
-  if (currentThickness === 1) {
+  if (selectedStickerEmoji) {
+    canvas.style.cursor = "crosshair";
+  } else if (currentThickness === 1) {
     canvas.style.cursor = smallCursor;
   } else {
     canvas.style.cursor = bigCursor;
@@ -106,7 +185,7 @@ function updateCursor() {
 
 function setSelectedTool(selectedButton: HTMLButtonElement) {
   const allToolButtons = document.querySelectorAll(
-    "#thinMarkerButton, #thickMarkerButton",
+    "#thinMarkerButton, #thickMarkerButton, #starButton, #saturnButton, #cometButton",
   );
   allToolButtons.forEach((button) => {
     button.classList.remove("selectedTool");
@@ -115,13 +194,22 @@ function setSelectedTool(selectedButton: HTMLButtonElement) {
   selectedButton.classList.add("selectedTool");
 }
 
+function selectSticker(emoji: string, button: HTMLButtonElement) {
+  selectedStickerEmoji = emoji;
+  setSelectedTool(button);
+  updateCursor();
+  dispatchToolMoved(`sticker:${emoji}`);
+}
+
 const thinButton = document.getElementById(
   "thinMarkerButton",
 ) as HTMLButtonElement;
 thinButton.addEventListener("click", () => {
   currentThickness = 1;
+  selectedStickerEmoji = null;
   setSelectedTool(thinButton);
   updateCursor();
+  dispatchToolMoved("thin-marker");
 });
 
 const thickButton = document.getElementById(
@@ -129,8 +217,31 @@ const thickButton = document.getElementById(
 ) as HTMLButtonElement;
 thickButton.addEventListener("click", () => {
   currentThickness = 5;
+  selectedStickerEmoji = null;
   setSelectedTool(thickButton);
   updateCursor();
+  dispatchToolMoved("thick-marker");
+});
+
+const starButton = document.getElementById(
+  "starStickerButton",
+) as HTMLButtonElement;
+starButton.addEventListener("click", () => {
+  selectSticker("⭐", starButton);
+});
+
+const saturnButton = document.getElementById(
+  "saturnStickerButton",
+) as HTMLButtonElement;
+saturnButton.addEventListener("click", () => {
+  selectSticker("🪐", saturnButton);
+});
+
+const cometButton = document.getElementById(
+  "cometStickerButton",
+) as HTMLButtonElement;
+cometButton.addEventListener("click", () => {
+  selectSticker("☄️", cometButton);
 });
 
 setSelectedTool(thinButton);
@@ -158,27 +269,67 @@ clearButton.addEventListener("click", () => {
   drawingData = [];
   undoneStrokes = [];
   currentStroke = null;
+  currentStickerPreview = null;
   dispatchDrawingChanged();
 });
 
 canvas.addEventListener("mousedown", (e) => {
-  isDrawing = true;
-  currentStroke = new MarkerLine(
-    { x: e.offsetX, y: e.offsetY },
-    currentThickness,
-  );
-  dispatchDrawingChanged();
+  const point = { x: e.offsetX, y: e.offsetY };
+
+  if (!selectedStickerEmoji) {
+    for (let i = drawingData.length - 1; i >= 0; i--) {
+      const item = drawingData[i];
+      if (item instanceof Sticker && item.containsPoint(point)) {
+        isDraggingSticker = true;
+        draggedSticker = item;
+        dispatchDrawingChanged();
+        return;
+      }
+    }
+  }
+
+  if (selectedStickerEmoji) {
+    isPlacingSticker = true;
+    currentStickerPreview = new StickerPreview(point, selectedStickerEmoji);
+    dispatchDrawingChanged();
+  } else {
+    isDrawing = true;
+    currentStroke = new MarkerLine(point, currentThickness);
+    dispatchDrawingChanged();
+  }
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (isDrawing && currentStroke) {
+  const point = { x: e.offsetX, y: e.offsetY };
+
+  if (isDraggingSticker && draggedSticker) {
+    draggedSticker.drag(point.x, point.y);
+    dispatchDrawingChanged();
+  } else if (isPlacingSticker && currentStickerPreview) {
+    currentStickerPreview.drag(point.x, point.y);
+    dispatchDrawingChanged();
+  } else if (isDrawing && currentStroke) {
     currentStroke.drag(e.offsetX, e.offsetY);
     dispatchDrawingChanged();
   }
 });
 
 canvas.addEventListener("mouseup", (e) => {
-  if (isDrawing && currentStroke) {
+  const point = { x: e.offsetX, y: e.offsetY };
+
+  if (isDraggingSticker && draggedSticker) {
+    draggedSticker.drag(point.x, point.y);
+    drawingData.push(draggedSticker);
+    draggedSticker = null;
+    isDraggingSticker = false;
+    dispatchDrawingChanged();
+  } else if (isPlacingSticker && currentStickerPreview) {
+    const sticker = new Sticker(point, selectedStickerEmoji!);
+    drawingData.push(sticker);
+    currentStickerPreview = null;
+    isPlacingSticker = false;
+    dispatchDrawingChanged();
+  } else if (isDrawing && currentStroke) {
     currentStroke.drag(e.offsetX, e.offsetY);
     drawingData.push(currentStroke);
     currentStroke = null;
@@ -188,7 +339,16 @@ canvas.addEventListener("mouseup", (e) => {
 });
 
 canvas.addEventListener("mouseleave", (e) => {
-  if (isDrawing && currentStroke) {
+  if (isDraggingSticker && draggedSticker) { // Cancels drag when dragging sticker
+    drawingData.push(draggedSticker);
+    draggedSticker = null;
+    isDraggingSticker = false;
+    dispatchDrawingChanged();
+  } else if (isPlacingSticker && currentStickerPreview) { // When mouse leaves canvas, it cancels the sticker
+    currentStickerPreview = null;
+    isPlacingSticker = false;
+    dispatchDrawingChanged();
+  } else if (isDrawing && currentStroke) {
     currentStroke.drag(e.offsetX, e.offsetY);
     drawingData.push(currentStroke);
     currentStroke = null;
