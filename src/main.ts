@@ -19,12 +19,46 @@ document.body.insertBefore(title, canvas);
 const ctx = canvas.getContext("2d")!;
 
 type Point = { x: number; y: number };
-type Stroke = Point[];
-type Drawing = Stroke[];
 
-let drawingData: Drawing = [];
-let undoneStrokes: Stroke[] = [];
-let currentStroke: Stroke = [];
+interface DrawableCommand {
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+class MarkerLine implements DrawableCommand { // represents a single stroke
+  private points: Point[] = [];
+
+  constructor(initialPoint: Point) {
+    this.points.push(initialPoint);
+  }
+
+  drag(x: number, y: number): void {
+    this.points.push({ x, y });
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    if (this.points.length < 2) return;
+
+    ctx.beginPath();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+
+    ctx.stroke();
+    ctx.closePath();
+  }
+
+  getPoints(): Point[] { // get copy of points
+    return [...this.points];
+  }
+}
+
+let drawingData: DrawableCommand[] = [];
+let undoneStrokes: DrawableCommand[] = [];
+let currentStroke: MarkerLine | null = null;
 let isDrawing = false;
 
 function dispatchDrawingChanged() {
@@ -39,34 +73,17 @@ canvas.addEventListener("drawing-changed", () => {
 function redrawCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawingData.forEach((stroke) => {
-    if (stroke.length < 2) return;
-
-    ctx.beginPath();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
-    ctx.moveTo(stroke[0].x, stroke[0].y);
-
-    for (let i = 1; i < stroke.length; i++) {
-      ctx.lineTo(stroke[i].x, stroke[i].y);
-    }
-
-    ctx.stroke();
-    ctx.closePath();
+  drawingData.forEach((command) => {
+    command.display(ctx);
   });
+
+  if (currentStroke) {
+    currentStroke.display(ctx);
+  }
 }
 
 const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
 undoButton.addEventListener("click", () => {
-  if (undoneStrokes.length > 0) {
-    const lastUndone = undoneStrokes.pop()!;
-    drawingData.push(lastUndone);
-    dispatchDrawingChanged();
-  }
-});
-
-const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
-redoButton.addEventListener("click", () => {
   if (drawingData.length > 0) {
     const lastStroke = drawingData.pop()!;
     undoneStrokes.push(lastStroke);
@@ -74,42 +91,51 @@ redoButton.addEventListener("click", () => {
   }
 });
 
+const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
+redoButton.addEventListener("click", () => {
+  if (undoneStrokes.length > 0) {
+    const lastUndone = undoneStrokes.pop()!;
+    drawingData.push(lastUndone);
+    dispatchDrawingChanged();
+  }
+});
+
 const clearButton = document.getElementById("clearButton") as HTMLButtonElement;
 clearButton.addEventListener("click", () => {
   drawingData = [];
-  currentStroke = [];
   undoneStrokes = [];
+  currentStroke = null;
   dispatchDrawingChanged();
 });
 
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentStroke = [{ x: e.offsetX, y: e.offsetY }];
+  currentStroke = new MarkerLine({ x: e.offsetX, y: e.offsetY });
   dispatchDrawingChanged();
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (isDrawing) {
-    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+  if (isDrawing && currentStroke) {
+    currentStroke.drag(e.offsetX, e.offsetY);
     dispatchDrawingChanged();
   }
 });
 
 canvas.addEventListener("mouseup", (e) => {
-  if (isDrawing) {
-    currentStroke.push({ x: e.offsetX, y: e.offsetY });
-    drawingData.push([...currentStroke]);
-    currentStroke = [];
+  if (isDrawing && currentStroke) {
+    currentStroke.drag(e.offsetX, e.offsetY);
+    drawingData.push(currentStroke);
+    currentStroke = null;
     isDrawing = false;
     dispatchDrawingChanged();
   }
 });
 
 canvas.addEventListener("mouseleave", (e) => {
-  if (isDrawing) {
-    currentStroke.push({ x: e.offsetX, y: e.offsetY });
-    drawingData.push([...currentStroke]);
-    currentStroke = [];
+  if (isDrawing && currentStroke) {
+    currentStroke.drag(e.offsetX, e.offsetY);
+    drawingData.push(currentStroke);
+    currentStroke = null;
     isDrawing = false;
     dispatchDrawingChanged();
   }
