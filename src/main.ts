@@ -7,7 +7,7 @@ const availableStickers = [
   { emoji: "☄️", buttonId: "cometStickerButton" },
 ];
 
-let allStickers = [...availableStickers];
+const allStickers = [...availableStickers];
 
 document.body.innerHTML = `
   <p><img src="${IconUrl}" class="icon" /></p>
