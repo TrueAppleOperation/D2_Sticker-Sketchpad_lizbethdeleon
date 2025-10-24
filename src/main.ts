@@ -1,6 +1,14 @@
 import IconUrl from "./drawing.jpg";
 import "./style.css";
 
+const availableStickers = [
+  { emoji: "⭐", buttonId: "starStickerButton" },
+  { emoji: "🪐", buttonId: "saturnStickerButton" },
+  { emoji: "☄️", buttonId: "cometStickerButton" },
+];
+
+let allStickers = [...availableStickers];
+
 document.body.innerHTML = `
   <p><img src="${IconUrl}" class="icon" /></p>
   <canvas id = "canvas" width = "256" height = "256"></canvas>
@@ -15,9 +23,12 @@ document.body.innerHTML = `
     <button id = "thickMarkerButton" > Thick </button>
       <br>
       <br>
-    <button id = "starStickerButton" >⭐</button>
-    <button id = "saturnStickerButton" >🪐</button>
-    <button id = "cometStickerButton" >☄️</button>
+    ${
+  availableStickers.map((sticker) =>
+    `<button id="${sticker.buttonId}">${sticker.emoji}</button>`
+  ).join("")
+}
+    <button id="customStickerButton"> + </button>
   </div>
 `;
 
@@ -185,7 +196,7 @@ function updateCursor() {
 
 function setSelectedTool(selectedButton: HTMLButtonElement) {
   const allToolButtons = document.querySelectorAll(
-    "#thinMarkerButton, #thickMarkerButton, #starButton, #saturnButton, #cometButton",
+    "#thinMarkerButton, #thickMarkerButton, [id^='starStickerButton'], [id^='saturnStickerButton'], [id^='cometStickerButton'], [id^='customStickerButton_']",
   );
   allToolButtons.forEach((button) => {
     button.classList.remove("selectedTool");
@@ -199,6 +210,28 @@ function selectSticker(emoji: string, button: HTMLButtonElement) {
   setSelectedTool(button);
   updateCursor();
   dispatchToolMoved(`sticker:${emoji}`);
+}
+
+function addCustomSticker() {
+  const text = prompt("Custom sticker text", "👾");
+  if (text && text.trim() !== "") {
+    const buttonId = `customStickerButton_${Date.now()}`; // Create unique id for customed sticker
+    const newSticker = { emoji: text.trim(), buttonId };
+
+    allStickers.push(newSticker);
+
+    const button = document.createElement("button");
+    button.id = buttonId;
+    button.textContent = text.trim();
+    button.addEventListener("click", () => {
+      selectSticker(newSticker.emoji, button);
+    });
+
+    const customButton = document.getElementById("customStickerButton");
+    customButton?.parentNode?.insertBefore(button, customButton);
+
+    selectSticker(newSticker.emoji, button);
+  }
 }
 
 const thinButton = document.getElementById(
@@ -223,26 +256,17 @@ thickButton.addEventListener("click", () => {
   dispatchToolMoved("thick-marker");
 });
 
-const starButton = document.getElementById(
-  "starStickerButton",
-) as HTMLButtonElement;
-starButton.addEventListener("click", () => {
-  selectSticker("⭐", starButton);
+availableStickers.forEach((sticker) => {
+  const button = document.getElementById(sticker.buttonId) as HTMLButtonElement;
+  button.addEventListener("click", () => {
+    selectSticker(sticker.emoji, button);
+  });
 });
 
-const saturnButton = document.getElementById(
-  "saturnStickerButton",
+const customStickerButton = document.getElementById(
+  "customStickerButton",
 ) as HTMLButtonElement;
-saturnButton.addEventListener("click", () => {
-  selectSticker("🪐", saturnButton);
-});
-
-const cometButton = document.getElementById(
-  "cometStickerButton",
-) as HTMLButtonElement;
-cometButton.addEventListener("click", () => {
-  selectSticker("☄️", cometButton);
-});
+customStickerButton.addEventListener("click", addCustomSticker);
 
 setSelectedTool(thinButton);
 
