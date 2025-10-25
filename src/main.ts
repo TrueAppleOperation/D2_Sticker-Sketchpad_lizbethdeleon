@@ -15,12 +15,15 @@ document.body.innerHTML = `
   <div>
       <br>
     <button id = "clearButton" > Clear </button>
-    <button id = "redoButton" > Undo </button>
-    <button id = "undoButton" > Redo </button>
+    <button id = "undoButton" > Undo </button>
+    <button id = "redoButton" > Redo </button>
       <br>
       <br>
     <button id = "thinMarkerButton" > Thin </button>
     <button id = "thickMarkerButton" > Thick </button>
+      <br>
+      <br>
+    <button id = "exportButton" > Export </button>
       <br>
       <br>
     ${
@@ -256,6 +259,27 @@ thickButton.addEventListener("click", () => {
   dispatchToolMoved("thick-marker");
 });
 
+const exportButton = document.getElementById(
+  "exportButton",
+) as HTMLButtonElement;
+exportButton.addEventListener("click", () => {
+  const exportCanvas = document.createElement("canvas"); // Create temp new canvas
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+
+  const ctxExport = exportCanvas.getContext("2d")!; // Appiled scaling
+  ctxExport.scale(4, 4);
+
+  drawingData.forEach((command) => { // Move drawing data from ctx to ctxExport
+    command.display(ctxExport);
+  });
+
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png"); // Exports image
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
+
 availableStickers.forEach((sticker) => {
   const button = document.getElementById(sticker.buttonId) as HTMLButtonElement;
   button.addEventListener("click", () => {
@@ -270,20 +294,20 @@ customStickerButton.addEventListener("click", addCustomSticker);
 
 setSelectedTool(thinButton);
 
-const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
-redoButton.addEventListener("click", () => {
+const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
+undoButton.addEventListener("click", () => {
   if (drawingData.length > 0) {
-    const lastStroke = drawingData.pop()!;
-    undoneStrokes.push(lastStroke);
+    const lastStroke = drawingData.pop()!; // takes the latest popped off drawing data and saves it to lastStroke
+    undoneStrokes.push(lastStroke); // and undoneStrokes stores as the latest
     dispatchDrawingChanged();
   }
 });
 
-const undoButton = document.getElementById("undoButton") as HTMLButtonElement;
-undoButton.addEventListener("click", () => {
+const redoButton = document.getElementById("redoButton") as HTMLButtonElement;
+redoButton.addEventListener("click", () => {
   if (undoneStrokes.length > 0) {
-    const lastUndone = undoneStrokes.pop()!;
-    drawingData.push(lastUndone);
+    const lastUndone = undoneStrokes.pop()!; // saves the popped undone stroke to lastUndone
+    drawingData.push(lastUndone); // Restores the last undone stroke to the canvas
     dispatchDrawingChanged();
   }
 });
