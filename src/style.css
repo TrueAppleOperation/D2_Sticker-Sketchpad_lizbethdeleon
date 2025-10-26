@@ -1,12 +1,53 @@
 .icon {
   width: 130px;
-  vertical-align: top;
-  border: 1px solid black;
+  vertical-align: center;
+  border: 1px solid rgb(0, 32, 81);
 }
 
 #canvas {
-  border: 1.5px solid black;
+  border: 1.5px solid rgb(0, 32, 81);
   border-radius: 10px;
-  filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(5px 5px 10px rgba(0, 32, 81, 0.5));
   background-color: white;
+}
+
+.all-buttons {
+  gap: 5px;
+  margin: 5px;
+  margin-top: 15px;
+}
+
+.all-buttons button {
+  background-color: rgba(0, 38, 95, 0.306);
+  border: 2px solid rgb(3, 55, 132);
+  border-radius: 6px;
+  font-size: small;
+  color: rgb(0, 32, 81);
+}
+
+.all-buttons button:hover {
+  background-color: rgba(2, 41, 101, 0.731);
+  transform: translateY(-2px);
+  border-color: rgb(0, 32, 81);
+  color: white;
+}
+
+.all-buttons button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 32, 81, 0.2);
+  transition: all 0.1s ease;
+}
+
+.stickers-container {
+  display: flex;
+  flex-direction: left;
+  align-items: center;
+  gap: 5px;
+  margin: 5px;
+}
+
+.sticker-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
 }

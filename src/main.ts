@@ -2,41 +2,46 @@ import IconUrl from "./drawing.jpg";
 import "./style.css";
 
 const availableStickers = [
-  { emoji: "⭐", buttonId: "starStickerButton" },
-  { emoji: "🪐", buttonId: "saturnStickerButton" },
   { emoji: "☄️", buttonId: "cometStickerButton" },
+  { emoji: "🪐", buttonId: "saturnStickerButton" },
+  { emoji: "⭐", buttonId: "starStickerButton" },
+  { emoji: "🌌", buttonId: "spaceStickerButton" },
+  { emoji: "🌑", buttonId: "moonStickerButton" },
 ];
 
 const allStickers = [...availableStickers];
 
 document.body.innerHTML = `
   <p><img src="${IconUrl}" class="icon" /></p>
-  <canvas id = "canvas" width = "256" height = "256"></canvas>
-  <div>
-      <br>
-    <button id = "clearButton" > Clear </button>
-    <button id = "undoButton" > Undo </button>
-    <button id = "redoButton" > Redo </button>
-      <br>
-      <br>
-    <button id = "thinMarkerButton" > Thin </button>
-    <button id = "thickMarkerButton" > Thick </button>
-      <br>
-      <br>
-    <button id = "exportButton" > Export </button>
-      <br>
-      <br>
-    ${
+  <canvas id="canvas" width="256" height="256"></canvas>
+  <div class="all-buttons">
+    <button id="clearButton">Clear</button>
+    <button id="undoButton">Undo</button>
+    <button id="redoButton">Redo</button>
+    <br>
+    <br>
+    <button id="thinMarkerButton">Thin</button>
+    <button id="thickMarkerButton">Thick</button>
+    <br>
+    <br>
+    <button id="exportButton">Export</button>
+    <br>
+    <br>
+    <div class="stickers-container">
+      <div class="sticker-buttons">
+        ${
   availableStickers.map((sticker) =>
     `<button id="${sticker.buttonId}">${sticker.emoji}</button>`
   ).join("")
 }
-    <button id="customStickerButton"> + </button>
+      </div>
+      <button id="customStickerButton">+</button>
+    </div>
   </div>
 `;
 
 const smallCursor =
-  `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4"><circle cx="2" cy="2" r="1" fill="black" stroke="white" stroke-width="0.5"/></svg>') 2 2, auto`;
+  `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4"><circle cx="2" cy="2" r="2" fill="black" stroke="white" stroke-width="0.5"/></svg>') 2 2, auto`;
 const bigCursor =
   `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3" fill="black" stroke="white" stroke-width="0.5"/></svg>') 6 6, auto`;
 
@@ -57,7 +62,7 @@ class MarkerLine implements DrawableCommand {
   private points: Point[] = [];
   private thickness: number;
 
-  constructor(initialPoint: Point, thickness: number = 1) {
+  constructor(initialPoint: Point, thickness: number = 2) {
     this.points.push(initialPoint);
     this.thickness = thickness;
   }
@@ -153,7 +158,7 @@ let isDrawing = false;
 let isPlacingSticker = false;
 let isDraggingSticker = false;
 let draggedSticker: Sticker | null = null;
-let currentThickness: number = 1;
+let currentThickness: number = 2;
 
 canvas.style.cursor = smallCursor;
 
@@ -190,7 +195,7 @@ function redrawCanvas() {
 function updateCursor() {
   if (selectedStickerEmoji) {
     canvas.style.cursor = "crosshair";
-  } else if (currentThickness === 1) {
+  } else if (currentThickness === 2) {
     canvas.style.cursor = smallCursor;
   } else {
     canvas.style.cursor = bigCursor;
@@ -230,8 +235,8 @@ function addCustomSticker() {
       selectSticker(newSticker.emoji, button);
     });
 
-    const customButton = document.getElementById("customStickerButton");
-    customButton?.parentNode?.insertBefore(button, customButton);
+    const stickerButtons = document.querySelector(".sticker-buttons"); // add stickers to sticker container | five sticker per row
+    stickerButtons?.appendChild(button);
 
     selectSticker(newSticker.emoji, button);
   }
@@ -241,7 +246,7 @@ const thinButton = document.getElementById(
   "thinMarkerButton",
 ) as HTMLButtonElement;
 thinButton.addEventListener("click", () => {
-  currentThickness = 1;
+  currentThickness = 2;
   selectedStickerEmoji = null;
   setSelectedTool(thinButton);
   updateCursor();
