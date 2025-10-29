@@ -23,6 +23,7 @@
   border-radius: 6px;
   font-size: small;
   color: rgb(0, 32, 81);
+  transition: all 0.2s ease;
 }
 
 .all-buttons button:hover {
@@ -50,4 +51,30 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 5px;
+}
+
+#thinMarkerButton, #thickMarkerButton {
+  border: 2px solid;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sticker-buttons button {
+  border: 2px solid rgb(3, 55, 132);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  background-color: rgba(0, 38, 95, 0.306);
+}
+
+.selectedTool {
+  box-shadow: 0 0 12px rgba(0, 32, 81, 0.6);
+  transform: translateY(-2px) scale(1.05);
+  border-color: rgb(0, 32, 81) !important;
+  z-index: 10;
+}
+
+.selectedTool:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 0 15px rgba(0, 32, 81, 0.8);
 }
